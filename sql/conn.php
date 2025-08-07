@@ -1,8 +1,8 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "qrdb";
+$servername = "sql101.infinityfree.com";
+$username = "if0_39104991";
+$password = "c4b4TbwWTGY";
+$dbname = "if0_39104991_XXX";
 $port = 3306;
 
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
