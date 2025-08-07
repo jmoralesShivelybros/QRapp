@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Buscar Equipo</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/styles.css" rel="stylesheet" />
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Select2 (Biblioteca para selectores con búsqueda) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Tema de Select2 para Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <style>
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="mb-3">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="index.html">QR Equipos</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link active" href="index.html">Escaner QR</a></li>
+                        <li class="nav-item"><a class="nav-link" href="equipos.html">Administrar Equipos</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8">
+                <h4 class="mb-3 text-center">Buscar equipo por QR o ID</h4>
+                <div class="mb-3">
+                    <label for="assetInput" class="form-label">Shively Id / Asset</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="assetInput" placeholder="Buscar por ID, usuario, marca, modelo...">
+                        <button class="btn btn-outline-success" type="button" id="scanBtn">Escanear QR</button>
+                    </div>
+                </div>
+                <div id="reader" class="mb-3 d-none"></div>
+                <button class="btn btn-success w-100 mb-3" id="searchBtn">Buscar</button>
+                <div id="result" class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead class="table-success">
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Modelo</th>
+                                <th>Serie</th>
+                                <th>Usuario</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Aquí van los renglones generados por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="mt-5 text-center text-muted">
+        <small>QR Equipos &copy; 2025</small>
+    </footer>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- 2. Crear función de notificación reutilizable (Toast) -->
+    <script>
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        });
+
+        function mostrarNotificacion(icon, title) {
+            Toast.fire({ icon: icon, title: title });
+        }
+    </script>
+
+    <!-- jQuery (requerido por Select2) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+
+    <!-- Modal para editar usuario -->
+    <div class="modal fade" id="modalEditarUsuario" tabindex="-1" aria-labelledby="modalEditarUsuarioLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <form class="modal-content" id="formEditarUsuario">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarUsuarioLabel">Editar Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editUsuarioId" name="id">
+                    <div class="mb-3">
+                        <label for="editNombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="editNombre" name="nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCorreo" class="form-label">Correo</label>
+                        <input type="email" class="form-control" id="editCorreo" name="correo">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editArea" class="form-label">Área</label>
+                        <input type="text" class="form-control" id="editArea" name="area">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editUbicacion" class="form-label">Ubicación</label>
+                        <input type="text" class="form-control" id="editUbicacion" name="ubicacion">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Asignar Usuario -->
+    <div class="modal fade" id="modalAsignarUsuario" tabindex="-1" aria-labelledby="modalAsignarUsuarioLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <form class="modal-content" id="formAsignarUsuario">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAsignarUsuarioLabel">Asignar Equipo a Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="assignAssetId" name="asset_id">
+                    <div class="mb-3">
+                        <label for="assignUsuarioSelect" class="form-label">Seleccionar Usuario</label>
+                        <select class="form-select" id="assignUsuarioSelect" name="usuario_id" required>
+                            <option value="" selected disabled>Cargando usuarios...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Asignar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        const scanBtn = document.getElementById('scanBtn');
+        const reader = document.getElementById('reader');
+        const assetInput = document.getElementById('assetInput');
+        let html5QrCode; // Declarar la variable del scanner aquí
+
+        scanBtn.addEventListener('click', () => {
+            reader.classList.remove('d-none');
+            // Inicializar el scanner si no lo está ya
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                qrCodeMessage => {
+                    assetInput.value = qrCodeMessage;
+                    html5QrCode.stop().catch(err => console.error("Error al detener el scanner:", err));
+                    reader.classList.add('d-none');
+                    // Disparar la búsqueda automáticamente después de escanear
+                    document.getElementById('searchBtn').click();
+                },
+                errorMessage => { /* No hacer nada en caso de error de escaneo */ }
+            ).catch(err => {
+                console.error("No se pudo iniciar la cámara:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Cámara',
+                    text: 'No se pudo acceder a la cámara. Asegúrate de que has concedido los permisos y que la página se sirve a través de HTTPS, lo cual es un requisito en la mayoría de los navegadores móviles.',
+                    confirmButtonText: 'Entendido'
+                });
+            });
+        });
+
+        // --- Funciones de la Aplicación ---
+
+        window.editarUsuario = function (id) {
+            fetch('php/buscar_equipo.php?usuario_id=' + id)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.usuario) {
+                        const form = document.getElementById('formEditarUsuario');
+                        form.querySelector('#editUsuarioId').value = data.usuario.id;
+                        form.querySelector('#editNombre').value = data.usuario.nombre;
+                        form.querySelector('#editCorreo').value = data.usuario.correo;
+                        form.querySelector('#editArea').value = data.usuario.area;
+                        form.querySelector('#editUbicacion').value = data.usuario.ubicacion;
+                        const modal = new bootstrap.Modal(document.getElementById('modalEditarUsuario'));
+                        modal.show();
+                    } else {
+                        mostrarNotificacion('error', data.message || 'No se pudo cargar el usuario.');
+                    }
+                })
+                .catch(err => {
+                    mostrarNotificacion('error', 'Error de comunicación al editar.');
+                    console.error('Error en fetch al editar usuario:', err);
+                });
+        };
+
+        window.desactivarUsuario = function (usuarioId) {
+            Swal.fire({
+                title: '¿Desactivar a este usuario?',
+                text: "Los equipos que tenga asignados aparecerán como 'Sin asignar'. Esta acción se puede revertir.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, ¡desactivar!',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const params = new URLSearchParams({ _method: 'DELETE', id: usuarioId });
+                    fetch('php/buscar_equipo.php', { method: 'POST', body: params })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                mostrarNotificacion('success', data.message || 'Usuario desactivado');
+                                document.getElementById('searchBtn').click();
+                            } else {
+                                mostrarNotificacion('error', data.message || 'Error al desactivar');
+                            }
+                        })
+                        .catch(err => {
+                            mostrarNotificacion('error', 'Error de comunicación al desactivar.');
+                            console.error('Error en fetch al desactivar:', err);
+                        });
+                }
+            });
+        };
+
+        window.mostrarModalAsignar = function(assetId) {
+            document.getElementById('assignAssetId').value = assetId;
+            const select = document.getElementById('assignUsuarioSelect');
+            select.innerHTML = '<option value="" selected disabled>Cargando usuarios...</option>';
+
+            fetch('php/buscar_equipo.php?get_all_users=true')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.usuarios.length > 0) {
+                        select.innerHTML = '<option value="" selected disabled>Selecciona un usuario</option>';
+                        data.usuarios.forEach(user => {
+                            const option = new Option(user.nombre, user.id);
+                            select.add(option);
+                        });
+                    } else {
+                        select.innerHTML = '<option value="" selected disabled>No hay usuarios activos</option>';
+                        if (!data.success) mostrarNotificacion('error', data.message || 'No se pudieron cargar los usuarios.');
+                    }
+                })
+                .catch(err => {
+                    mostrarNotificacion('error', 'Error de red al cargar usuarios.');
+                    console.error('Error en fetch al cargar usuarios:', err);
+                });
+
+            // Inicializamos Select2 en el selector
+            $('#assignUsuarioSelect').select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#modalAsignarUsuario') // Importante para que funcione dentro de un modal
+            });
+            const modal = new bootstrap.Modal(document.getElementById('modalAsignarUsuario'));
+            modal.show();
+        };
+
+        // --- Event Listeners ---
+
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            const searchTerm = assetInput.value.trim();
+            if (searchTerm === "") {
+                document.getElementById('result').innerHTML = '<div class="alert alert-warning">Ingresa un dato de busqueda o escanea un QR.</div>';
+                return;
+            }
+            fetch('php/buscar_equipo.php?q=' + encodeURIComponent(searchTerm))
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.equipos.length > 0) {
+                        let html = `<table class="table table-striped align-middle mb-0">
+                                        <thead class="table-success">
+                                            <tr><th>Tipo</th><th>Modelo</th><th>Serie</th><th>Usuario</th><th>Acciones</th></tr>
+                                        </thead>
+                                        <tbody>`;
+                        data.equipos.forEach(eq => {
+                            const actionButtons = eq.usuario_id ?
+                                `<div class="d-flex flex-column flex-md-row gap-1">
+                                    <button class="btn btn-sm btn-success" onclick="editarUsuario(${eq.usuario_id})">Editar</button>
+                                    <button class="btn btn-sm btn-danger" onclick="desactivarUsuario(${eq.usuario_id})">Desactivar</button>
+                                </div>` :
+                                `<button class="btn btn-sm btn-success" onclick="mostrarModalAsignar(${eq.asset_id})">Asignar</button>`;
+
+                            html += `<tr>
+                                        <td>${eq.tipo || ''}</td>
+                                        <td>${eq.modelo || ''}</td>
+                                        <td>${eq.serie || ''}</td>
+                                        <td>${eq.usuario_nombre || 'Sin asignar'}</td>
+                                        <td>${actionButtons}</td>
+                                     </tr>`;
+                        });
+                        html += `</tbody></table>`;
+                        document.getElementById('result').innerHTML = html;
+                    } else {
+                        document.getElementById('result').innerHTML = `<div class="alert alert-danger">${data.message || 'No se encontró información para ese ID.'}</div>`;
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('result').innerHTML = '<div class="alert alert-danger">Error al buscar el equipo. Revisa la consola.</div>';
+                    console.error('Error en fetch al buscar:', err);
+                });
+        });
+
+        document.getElementById('formEditarUsuario').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('_method', 'PUT');
+            fetch('php/buscar_equipo.php', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarNotificacion('success', data.message || 'Usuario actualizado');
+                        bootstrap.Modal.getInstance(document.getElementById('modalEditarUsuario')).hide();
+                        document.getElementById('searchBtn').click();
+                    } else {
+                        mostrarNotificacion('error', data.message || 'Error al actualizar');
+                    }
+                });
+        });
+
+        document.getElementById('formAsignarUsuario').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('action', 'assign_user');
+            fetch('php/buscar_equipo.php', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarNotificacion('success', data.message);
+                        bootstrap.Modal.getInstance(document.getElementById('modalAsignarUsuario')).hide();
+                        document.getElementById('searchBtn').click();
+                    } else {
+                        mostrarNotificacion('error', data.message);
+                    }
+                });
+        });
+    </script>
+
+</body>
+
+</html>

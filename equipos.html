@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <title>Administrar Equipos</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/styles.css" rel="stylesheet" />
+    <!-- Select2 (Biblioteca para selectores con búsqueda) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Tema de Select2 para Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <header class="mb-3">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="index.html">QR Equipos</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="index.html">Escaner QR</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="equipos.html">Administrar Equipos</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10">
+                <div class="d-flex flex-column flex-sm-row justify-content-sm-between align-items-sm-center mb-3">
+                    <h4 class="mb-0">Inventario de Equipos</h4>
+                    <button class="btn btn-warning mt-2 mt-sm-0" id="btnCrearEquipo">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"/>
+                        </svg>
+                        Crear Nuevo Equipo
+                    </button>
+                </div>
+
+                <div class="mb-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Buscar por Asset ID, tipo, fabricante, modelo...">
+                        <button class="btn btn-primary" type="button" id="searchBtn">Buscar</button>
+                    </div>
+                </div>
+
+                <div id="lista-equipos" class="table-responsive">
+                    <p class="text-center p-3">Cargando equipos...</p>
+                </div>
+
+                <nav id="pagination-container" aria-label="Navegación de páginas" class="mt-4">
+                    <ul class="pagination justify-content-center" id="pagination-controls">
+                        <!-- Los controles de paginación se generarán aquí -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="mt-5 text-center text-muted">
+        <small>QR Equipos &copy; 2025</small>
+    </footer>
+
+    <!-- Modal para Crear/Editar Equipo -->
+    <div class="modal fade" id="modalEquipo" tabindex="-1" aria-labelledby="modalEquipoLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form class="modal-content" id="formEquipo">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEquipoLabel">Crear Nuevo Equipo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="equipoId" name="id">
+                    <div class="mb-3">
+                        <label for="assetId" class="form-label">Asset ID / Shively ID</label>
+                        <input type="number" class="form-control" id="assetId" name="asset_id" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tipo" class="form-label">Tipo de Equipo</label>
+                        <select class="form-select" id="tipo" name="tipo" required>
+                            <option value="Laptop">Laptop</option>
+                            <option value="Telefono">Teléfono</option>
+                            <option value="Tablet">Tablet</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="fabricante" class="form-label">Fabricante</label>
+                        <input type="text" class="form-control" id="fabricante" name="fabricante">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modelo" class="form-label">Modelo</label>
+                        <input type="text" class="form-control" id="modelo" name="modelo">
+                    </div>
+                    <div class="mb-3">
+                        <label for="serie" class="form-label">Número de Serie</label>
+                        <input type="text" class="form-control" id="serie" name="serie">
+                    </div>
+                    <div class="mb-3">
+                        <label for="usuarioId" class="form-label">Asignar a Usuario (Opcional)</label>
+                        <select class="form-select" id="usuarioId" name="usuario_id">
+                            <!-- Opciones de usuario se cargarán aquí -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- jQuery (requerido por Select2) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        const modalEl = document.getElementById('modalEquipo');
+        const modal = new bootstrap.Modal(modalEl);
+        const form = document.getElementById('formEquipo');
+
+        function cargarEquipos(page = 1, searchQuery = '') {
+            const searchInput = document.getElementById('searchInput');
+            const query = searchQuery || searchInput.value.trim();
+
+            let url = `php/equipos_api.php?page=${page}`;
+            if (query) url += `&q=${encodeURIComponent(query)}`;
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('lista-equipos');
+                    if (data.success && data.equipos.length > 0) {
+                        let html = `<table class="table table-striped align-middle">
+                                        <thead class="table-primary">
+                                            <tr>
+                                                <th>Asset ID</th>
+                                                <th>Tipo</th>
+                                                <th>Fabricante</th>
+                                                <th>Modelo</th>
+                                                <th>Serie</th>
+                                                <th>Asignado a</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>`;
+                        data.equipos.forEach(eq => {
+                            html += `<tr>
+                                        <td>${eq.asset_id || ''}</td>
+                                        <td>${eq.tipo || ''}</td>
+                                        <td>${eq.fabricante || ''}</td>
+                                        <td>${eq.modelo || ''}</td>
+                                        <td>${eq.serie || ''}</td>
+                                        <td>${eq.usuario_nombre || '<em>Sin asignar</em>'}</td>
+                                        <td>
+                                            <div class="d-flex flex-column flex-md-row gap-1">
+                                                <button class="btn btn-sm btn-success" onclick='abrirModalEditar(${JSON.stringify(eq)})'>Editar</button>
+                                                <button class="btn btn-sm btn-danger" onclick="borrarEquipo(${eq.id}, ${eq.asset_id})">Borrar</button>
+                                            </div>
+                                        </td>
+                                     </tr>`;
+                        });
+                        html += `</tbody></table>`;
+                        container.innerHTML = html;
+                        renderPagination(data.pagination);
+                    } else if (query) {
+                        container.innerHTML = `<div class="alert alert-warning text-center">No se encontraron equipos para la búsqueda: "${query}"</div>`;
+                        document.getElementById('pagination-container').innerHTML = '';
+                    }
+                    else {
+                        container.innerHTML = '<div class="alert alert-info text-center">No hay equipos registrados. ¡Crea el primero!</div>';
+                        document.getElementById('pagination-container').innerHTML = '';
+                    }
+                });
+        }
+
+        function renderPagination(pagination) {
+            const { currentPage, totalPages, searchQuery } = pagination;
+            const container = document.getElementById('pagination-controls');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const safeSearchQuery = searchQuery ? searchQuery.replace(/'/g, "\\'") : '';
+
+            let html = '';
+            const prevDisabled = currentPage === 1 ? 'disabled' : '';
+            html += `<li class="page-item ${prevDisabled}"><a class="page-link" href="#" onclick="event.preventDefault(); cargarEquipos(${currentPage - 1}, '${safeSearchQuery}')">Anterior</a></li>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}"><a class="page-link" href="#" onclick="event.preventDefault(); cargarEquipos(${i}, '${safeSearchQuery}')">${i}</a></li>`;
+            }
+
+            const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+            html += `<li class="page-item ${nextDisabled}"><a class="page-link" href="#" onclick="event.preventDefault(); cargarEquipos(${currentPage + 1}, '${safeSearchQuery}')">Siguiente</a></li>`;
+            container.innerHTML = html;
+        }
+
+        function abrirModalCrear() {
+            form.reset();
+            document.getElementById('equipoId').value = '';
+            document.getElementById('modalEquipoLabel').textContent = 'Crear Nuevo Equipo';
+            document.getElementById('assetId').readOnly = false;
+            cargarUsuariosEnSelector();
+            modal.show();
+        }
+
+        window.abrirModalEditar = function(equipo) {
+            form.reset();
+            document.getElementById('modalEquipoLabel').textContent = 'Editar Equipo';
+            form.querySelector('#equipoId').value = equipo.id;
+            form.querySelector('#assetId').value = equipo.asset_id;
+            form.querySelector('#assetId').readOnly = true; // No permitir editar el Asset ID
+            form.querySelector('#tipo').value = equipo.tipo;
+            form.querySelector('#fabricante').value = equipo.fabricante;
+            form.querySelector('#modelo').value = equipo.modelo;
+            form.querySelector('#serie').value = equipo.serie;
+            
+            // Cargar usuarios y pre-seleccionar el actual
+            const assetIdParaUsuario = equipo.asset_id;
+            cargarUsuariosEnSelector(assetIdParaUsuario);
+
+            modal.show();
+        }
+
+        function cargarUsuariosEnSelector(assetIdParaUsuario = null) {
+            const select = $('#usuarioId');
+            select.empty().append(new Option('Cargando...', ''));
+
+            // Usamos la API del index para no duplicar código
+            fetch('php/buscar_equipo.php?get_all_users=true')
+                .then(res => res.json())
+                .then(data => {
+                    select.empty().append(new Option('Sin asignar', '0')); // Opción para desasignar
+                    if (data.success) {
+                        data.usuarios.forEach(user => {
+                            select.append(new Option(user.nombre, user.id));
+                        });
+                    }
+
+                    // Si estamos editando, buscamos el usuario actual y lo seleccionamos
+                    if (assetIdParaUsuario) {
+                        fetch(`php/buscar_equipo.php?q=${assetIdParaUsuario}`)
+                            .then(res => res.json())
+                            .then(equipoData => {
+                                if (equipoData.success && equipoData.equipos.length > 0) {
+                                    const usuarioIdActual = equipoData.equipos[0].usuario_id;
+                                    if (usuarioIdActual) {
+                                        select.val(usuarioIdActual).trigger('change');
+                                    }
+                                }
+                            });
+                    }
+                });
+            
+            select.select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#modalEquipo')
+            });
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const id = formData.get('id');
+            const method = id ? 'PUT' : 'POST';
+            if (id) formData.append('_method', 'PUT');
+
+            fetch('php/equipos_api.php', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        modal.hide();
+                        Swal.fire('¡Éxito!', data.message, 'success');
+                        cargarEquipos();
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                });
+        });
+
+        window.borrarEquipo = function(id, asset_id) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Se borrará el equipo con Asset ID ${asset_id}. ¡Esta acción no se puede revertir!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, ¡bórralo!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const params = new URLSearchParams({ _method: 'DELETE', id: id, asset_id: asset_id });
+                    fetch('php/equipos_api.php', { method: 'POST', body: params })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire('¡Borrado!', data.message, 'success');
+                                cargarEquipos();
+                            } else {
+                                Swal.fire('Error', data.message, 'error');
+                            }
+                        });
+                }
+            });
+        }
+
+        document.getElementById('btnCrearEquipo').addEventListener('click', abrirModalCrear);
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarEquipos(1);
+
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+
+            searchBtn.addEventListener('click', () => cargarEquipos(1, searchInput.value.trim()));
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchBtn.click();
+            });
+        });
+    </script>
+</body>
+</html>
