@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>Gestión de Almacén</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/styles.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.5/dist/sweetalert2.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="mb-3">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="index.html">QR Equipos</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="index.html">Escaner QR</a></li>
+                        <li class="nav-item"><a class="nav-link" href="equipos.html">Administrar Equipos</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="inventario.html">Almacén</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Inventario de Almacén</h4>
+                    <button class="btn btn-success" onclick="mostrarFormulario()">
+                        Nuevo Item
+                    </button>
+                </div>
+
+                <!-- Barra de búsqueda y filtros -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <input type="text" id="searchInput" class="form-control" placeholder="Buscar items...">
+                            </div>
+                            <div class="col-md-4">
+                                <select id="categoriaFilter" class="form-select">
+                                    <option value="">Todas las categorías</option>
+                                    <option value="Cables">Cables</option>
+                                    <option value="Periféricos">Periféricos</option>
+                                    <option value="Adaptadores">Adaptadores</option>
+                                    <option value="Otros">Otros</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de inventario -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>ID</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Cantidad</th>
+                                <th>Ubicación</th>
+                                <th>Categoría</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventarioTableBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                <nav aria-label="Paginación" class="mt-4">
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para crear/editar items -->
+    <div class="modal fade" id="itemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Nuevo Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="itemForm" onsubmit="return guardarItem(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="itemId">
+                        <div class="mb-3">
+                            <label class="form-label">Tipo</label>
+                            <input type="text" class="form-control" id="tipo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcion" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cantidad</label>
+                            <input type="number" class="form-control" id="cantidad" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ubicación</label>
+                            <input type="text" class="form-control" id="ubicacion" value="Almacén">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <select class="form-select" id="categoria" required>
+                                <option value="Cables">Cables</option>
+                                <option value="Periféricos">Periféricos</option>
+                                <option value="Adaptadores">Adaptadores</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-5 text-center text-muted">
+        <small>QR Equipos &copy; 2025</small>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.5/dist/sweetalert2.all.min.js"></script>
+
+    <script>
+        // Toast para notificaciones
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+
+        // Variables globales
+        let currentPage = 1;
+        let totalPages = 1;
+        const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarInventario();
+            
+            // Configurar eventos
+            document.getElementById('searchInput').addEventListener('input', debounce(() => cargarInventario(1), 300));
+            document.getElementById('categoriaFilter').addEventListener('change', () => cargarInventario(1));
+        });
+
+        // Funciones principales
+        async function cargarInventario(page = 1) {
+            const searchQuery = document.getElementById('searchInput').value;
+            const categoria = document.getElementById('categoriaFilter').value;
+            
+            try {
+                const response = await fetch(`php/almacen.php?page=${page}&q=${searchQuery}&categoria=${categoria}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarInventario(data.items);
+                    actualizarPaginacion(data.pagination);
+                } else {
+                    mostrarError('Error al cargar el inventario');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarError('Error de conexión');
+            }
+        }
+
+        function mostrarInventario(items) {
+            const tbody = document.getElementById('inventarioTableBody');
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay items para mostrar</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td>${item.id}</td>
+                    <td>${item.tipo}</td>
+                    <td>${item.descripcion}</td>
+                    <td>${item.cantidad}</td>
+                    <td>${item.ubicacion}</td>
+                    <td>${item.categoria}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick='editarItem(${JSON.stringify(item).replace(/"/g, '&quot;')})'>
+                            Editar
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="confirmarBorrado(${item.id})">
+                            Borrar
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function mostrarFormulario(item = null) {
+            document.getElementById('itemForm').reset();
+            document.getElementById('modalTitle').textContent = item ? 'Editar Item' : 'Nuevo Item';
+            
+            if (item) {
+                document.getElementById('itemId').value = item.id;
+                document.getElementById('tipo').value = item.tipo;
+                document.getElementById('descripcion').value = item.descripcion;
+                document.getElementById('cantidad').value = item.cantidad;
+                document.getElementById('ubicacion').value = item.ubicacion;
+                document.getElementById('categoria').value = item.categoria;
+            } else {
+                document.getElementById('itemId').value = '';
+            }
+            
+            itemModal.show();
+        }
+
+        function editarItem(item) {
+            mostrarFormulario(item);
+        }
+
+        async function guardarItem(event) {
+            event.preventDefault();
+            
+            const formData = new FormData();
+            const itemId = document.getElementById('itemId').value;
+            
+            formData.append('tipo', document.getElementById('tipo').value);
+            formData.append('descripcion', document.getElementById('descripcion').value);
+            formData.append('cantidad', document.getElementById('cantidad').value);
+            formData.append('ubicacion', document.getElementById('ubicacion').value);
+            formData.append('categoria', document.getElementById('categoria').value);
+            
+            if (itemId) {
+                formData.append('id', itemId);
+                formData.append('_method', 'PUT');
+            }
+            
+            try {
+                const response = await fetch('php/almacen.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    itemModal.hide();
+                    await cargarInventario(currentPage);
+                    Toast.fire({
+                        icon: 'success',
+                        title: data.message
+                    });
+                } else {
+                    mostrarError(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarError('Error al guardar el item');
+            }
+
+            return false;
+        }
+
+        function confirmarBorrado(id) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción no se puede deshacer",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, borrar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    borrarItem(id);
+                }
+            });
+        }
+
+        async function borrarItem(id) {
+            try {
+                const formData = new FormData();
+                formData.append('id', id);
+                formData.append('_method', 'DELETE');
+                
+                const response = await fetch('php/almacen.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    await cargarInventario(currentPage);
+                    Toast.fire({
+                        icon: 'success',
+                        title: data.message
+                    });
+                } else {
+                    mostrarError(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarError('Error al borrar el item');
+            }
+        }
+
+        function mostrarError(mensaje) {
+            Toast.fire({
+                icon: 'error',
+                title: mensaje
+            });
+        }
+
+        function actualizarPaginacion(paginacion) {
+            currentPage = paginacion.currentPage;
+            totalPages = paginacion.totalPages;
+            
+            const pagination = document.getElementById('pagination');
+            let html = '';
+            
+            if (totalPages > 1) {
+                html += `
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="cargarInventario(${currentPage - 1})">Anterior</a>
+                    </li>`;
+                    
+                for (let i = 1; i <= totalPages; i++) {
+                    html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="cargarInventario(${i})">${i}</a>
+                        </li>`;
+                }
+                    
+                html += `
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="cargarInventario(${currentPage + 1})">Siguiente</a>
+                    </li>`;
+            }
+            
+            pagination.innerHTML = html;
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+    </script>
+</body>
+</html>

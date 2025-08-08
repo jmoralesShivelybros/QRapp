@@ -1,24 +1,6 @@
 <?php
-// Habilitar reporte de errores para depuración
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Asegurarnos que no hay salida antes del header
-ob_start();
-
 header('Content-Type: application/json');
-
-// Verificar la conexión a la base de datos
 require_once __DIR__ . '/../sql/conn.php';
-if ($conn->connect_error) {
-    ob_clean();
-    echo json_encode([
-        'success' => false,
-        'message' => 'Error de conexión a la base de datos',
-        'error' => $conn->connect_error
-    ]);
-    exit;
-}
 
 function error_response($msg, $conn = null, $stmt = null) {
     $error_info = '';

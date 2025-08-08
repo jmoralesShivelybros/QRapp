@@ -134,24 +134,8 @@
             if (query) url += `&q=${encodeURIComponent(query)}`;
             
             fetch(url)
-                .then(async (res) => {
-                    // Agregamos un log para ver la respuesta completa
-                    const text = await res.text();
-                    console.log('Respuesta del servidor:', text); // <- Agregamos este log
-                    
-                    if (!res.ok) {
-                        throw new Error(`Error del servidor (${res.status}): ${text}`);
-                    }
-                    
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        console.error("Error al parsear JSON:", e);
-                        console.error("Contenido recibido:", text);
-                        throw new Error("La respuesta del servidor no es un JSON válido.");
-                    }
-                })
-                .then((data) => {
+                .then(res => res.json())
+                .then(data => {
                     const container = document.getElementById('lista-equipos');
                     if (data.success && data.equipos.length > 0) {
                         let html = `<table class="table table-striped align-middle">
@@ -177,7 +161,7 @@
                                         <td>${eq.usuario_nombre || '<em>Sin asignar</em>'}</td>
                                         <td>
                                             <div class="d-flex flex-column flex-md-row gap-1">
-                                                <button class="btn btn-sm btn-success" onclick='abrirModalEditar(${JSON.stringify(eq).replace(/'/g, '&#39;')})'>Editar</button>
+                                                <button class="btn btn-sm btn-success" onclick='abrirModalEditar(${JSON.stringify(eq)})'>Editar</button>
                                                 <button class="btn btn-sm btn-danger" onclick="borrarEquipo(${eq.id}, ${eq.asset_id})">Borrar</button>
                                             </div>
                                         </td>
@@ -188,20 +172,12 @@
                         renderPagination(data.pagination);
                     } else if (query) {
                         container.innerHTML = `<div class="alert alert-warning text-center">No se encontraron equipos para la búsqueda: "${query}"</div>`;
-                        document.getElementById('pagination-controls').innerHTML = '';
+                        document.getElementById('pagination-container').innerHTML = '';
                     }
                     else {
                         container.innerHTML = '<div class="alert alert-info text-center">No hay equipos registrados. ¡Crea el primero!</div>';
-                        document.getElementById('pagination-controls').innerHTML = '';
+                        document.getElementById('pagination-container').innerHTML = '';
                     }
-                })
-                .catch((error) => {
-                    console.error("Error al cargar equipos:", error);
-                    const container = document.getElementById('lista-equipos');
-                    container.innerHTML = `<div class="alert alert-danger text-center">
-                        <strong>Error al cargar los datos.</strong><br>
-                        Revisa la consola del navegador (F12) para ver los detalles técnicos.
-                    </div>`;
                 });
         }
 
@@ -255,52 +231,36 @@
             modal.show();
         }
 
-        async function cargarUsuariosEnSelector(assetIdParaUsuario = null) {
+        function cargarUsuariosEnSelector(assetIdParaUsuario = null) {
             const select = $('#usuarioId');
-            select.empty().append(new Option('Cargando...', '')).prop('disabled', true);
+            select.empty().append(new Option('Cargando...', ''));
 
-            try {
-                // Función interna para manejar la lógica de fetch y parseo
-                const fetchJson = async (url) => {
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`Error del servidor (${response.status}): ${errorText}`);
+            // Usamos la API del index para no duplicar código
+            fetch('php/buscar_equipo.php?get_all_users=true')
+                .then(res => res.json())
+                .then(data => {
+                    select.empty().append(new Option('Sin asignar', '0')); // Opción para desasignar
+                    if (data.success) {
+                        data.usuarios.forEach(user => {
+                            select.append(new Option(user.nombre, user.id));
+                        });
                     }
-                    const text = await response.text();
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        console.error("Respuesta no es JSON válido desde " + url, text);
-                        throw new Error("La respuesta del servidor no es un JSON válido.");
+
+                    // Si estamos editando, buscamos el usuario actual y lo seleccionamos
+                    if (assetIdParaUsuario) {
+                        fetch(`php/buscar_equipo.php?q=${assetIdParaUsuario}`)
+                            .then(res => res.json())
+                            .then(equipoData => {
+                                if (equipoData.success && equipoData.equipos.length > 0) {
+                                    const usuarioIdActual = equipoData.equipos[0].usuario_id;
+                                    if (usuarioIdActual) {
+                                        select.val(usuarioIdActual).trigger('change');
+                                    }
+                                }
+                            });
                     }
-                };
-
-                // 1. Cargar todos los usuarios
-                const usersData = await fetchJson('php/buscar_equipo.php?get_all_users=true');
-                select.empty().append(new Option('Sin asignar', '0')); // Opción para desasignar
-                if (usersData.success) {
-                    usersData.usuarios.forEach(user => {
-                        select.append(new Option(user.nombre, user.id));
-                    });
-                }
-
-                // 2. Si estamos editando, buscar y seleccionar el usuario actual
-                if (assetIdParaUsuario) {
-                    const equipoData = await fetchJson(`php/buscar_equipo.php?q=${assetIdParaUsuario}`);
-                    const usuarioIdActual = equipoData?.equipos?.[0]?.usuario_id;
-                    if (usuarioIdActual) {
-                        select.val(usuarioIdActual);
-                    }
-                }
-            } catch (error) {
-                console.error("Error al cargar usuarios en el selector:", error);
-                select.empty().append(new Option('Error al cargar', ''));
-                // Opcional: mostrar un SweetAlert o un mensaje de error en el modal
-            } finally {
-                select.prop('disabled', false).trigger('change'); // Habilitar y actualizar Select2
-            }
-
+                });
+            
             select.select2({
                 theme: 'bootstrap-5',
                 dropdownParent: $('#modalEquipo')
@@ -311,30 +271,20 @@
             e.preventDefault();
             const formData = new FormData(form);
             const id = formData.get('id');
+            const method = id ? 'PUT' : 'POST';
             if (id) formData.append('_method', 'PUT');
 
             fetch('php/equipos_api.php', { method: 'POST', body: formData })
-                .then(async (res) => {
-                    if (!res.ok) {
-                        const errorText = await res.text();
-                        throw new Error(`Error del servidor (${res.status}): ${errorText}`);
-                    }
-                    const text = await res.text();
-                    try { return JSON.parse(text); }
-                    catch (e) {
-                        console.error("La respuesta al guardar no es JSON. Contenido:", text);
-                        throw new Error("Respuesta inesperada del servidor.");
-                    }
-                })
+                .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         modal.hide();
                         Swal.fire('¡Éxito!', data.message, 'success');
-                        cargarEquipos(1, document.getElementById('searchInput').value.trim());
+                        cargarEquipos();
                     } else {
                         Swal.fire('Error', data.message, 'error');
                     }
-                }).catch(error => Swal.fire('Error', error.message, 'error'));
+                });
         });
 
         window.borrarEquipo = function(id, asset_id) {
@@ -350,26 +300,15 @@
                 if (result.isConfirmed) {
                     const params = new URLSearchParams({ _method: 'DELETE', id: id, asset_id: asset_id });
                     fetch('php/equipos_api.php', { method: 'POST', body: params })
-                        .then(async (res) => {
-                            if (!res.ok) {
-                                const errorText = await res.text();
-                                throw new Error(`Error del servidor (${res.status}): ${errorText}`);
-                            }
-                            const text = await res.text();
-                            try { return JSON.parse(text); }
-                            catch (e) {
-                                console.error("La respuesta al borrar no es JSON. Contenido:", text);
-                                throw new Error("Respuesta inesperada del servidor.");
-                            }
-                        })
+                        .then(res => res.json())
                         .then(data => {
                             if (data.success) {
                                 Swal.fire('¡Borrado!', data.message, 'success');
-                                cargarEquipos(1, document.getElementById('searchInput').value.trim());
+                                cargarEquipos();
                             } else {
                                 Swal.fire('Error', data.message, 'error');
                             }
-                        }).catch(error => Swal.fire('Error', error.message, 'error'));
+                        });
                 }
             });
         }
